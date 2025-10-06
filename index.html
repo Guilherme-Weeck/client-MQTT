@@ -252,8 +252,18 @@ function connect(){
   if(state.config.password) opts.password = state.config.password
 
   try{
-    client = mqtt.connect(state.config.broker, opts)
-  }catch(e){ alert('Erro ao iniciar cliente: '+e.message); return }
+    // adiciona will (Last Will Testament)
+    opts.will = {
+      topic: "XzzXminichat2025/presenca/" + state.config.clientId,
+      payload: "offline",
+      qos: 1,
+      retain: true
+    };
+    client = mqtt.connect(state.config.broker, opts);
+  }catch(e){
+    alert('Erro ao iniciar cliente: '+e.message);
+    return;
+  }
 
   $('status').textContent = 'Conectando...'
   $('status').className = ''
@@ -262,6 +272,8 @@ function connect(){
     $('status').textContent = 'Conectado'
     $('status').className = 'status-connected'
     appendLog({topic:'__client__',qos:0,payload:'connected',direction:'INFO'})
+    // 🚀 publica "online" para presença
+    client.publish("XzzXminichat2025/presenca/" + state.config.clientId, "online", {retain:true});
     // subscribe existing subscriptions
     state.subscriptions.forEach(s=> client.subscribe(s.topic, {qos: s.qos}, err=>{
       if(err) appendLog({topic:s.topic,qos:s.qos,payload:'subscribe error: '+String(err),direction:'ERROR'})
@@ -288,6 +300,13 @@ function connect(){
     appendLog({topic, qos: packet.qos, payload: payload.toString(), direction:'RECEIVED'})
   })
 }
+
+// --- status offline ao fechar navegador ---
+window.addEventListener('beforeunload', () => {
+  if(client && client.connected){
+    client.publish("XzzXminichat2025/presenca/" + state.config.clientId, "offline", {retain:true});
+  }
+});
 
 function disconnect(){
   if(client){ try{ client.end(); client = null }catch(e){} }
