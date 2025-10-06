@@ -259,6 +259,8 @@ function connect(){
       qos: 1,
       retain: true
     };
+    // 🔹 reduz o tempo de keepalive (detecção de desconexão mais rápida)
+    opts.keepalive = 15; // ou 10 segundos
     client = mqtt.connect(state.config.broker, opts);
   }catch(e){
     alert('Erro ao iniciar cliente: '+e.message);
